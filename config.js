@@ -24,6 +24,12 @@ module.exports = {
     autoscaling: {
       // text in the sns message or topicname to match on to process this service type
       match_text: "AutoScaling"
+    },
+    ecs_task_state_change: {
+      match_text: "ECS Task State Change"
+    },
+    codebuild_phase_change: {
+      match_text: "CodeBuild Build Phase Change"
     }
   }
 

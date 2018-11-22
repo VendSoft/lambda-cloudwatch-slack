@@ -311,6 +311,48 @@ var handleAutoScaling = function(event, context) {
   return _.merge(slackMessage, baseSlackMessage);
 };
 
+var handleElasticContainerService = function(event, context) {
+
+  var record = event.Records[0]
+  var timestamp = new Date(record.Sns.Timestamp).getTime() / 1000;
+  var message = JSON.parse(record.Sns.Message)
+  var subject = message["detail-type"]
+  var color = "good";
+  var detail = message.detail
+
+  if (detail.lastStatus === "STOPPED" && detail.containers[0].reason) {
+      color = "danger";
+  }
+
+  // Add all of the values from the event message to the Slack message description
+  var description = ""
+  for(key in message) {
+
+      var renderedMessage = typeof message[key] === 'object'
+                          ? JSON.stringify(message[key])
+                          : message[key]
+
+      description = description + "\n" + key + ": " + renderedMessage
+  }
+
+  var slackMessage = {
+      text: "*" + subject + "*",
+      attachments: [
+        {
+          "color": color,
+          "fields": [
+            { "title": "lastStatus", "value": detail.lastStatus, "short": false },
+            { "title": "taskArn", "value": detail.taskArn, "short": false },
+            { "title": "reason", "value": detail.containers[0].reason || detail.stoppedReason, "short": false }
+          ],
+          "ts": timestamp
+        }
+      ]
+  }
+
+return _.merge(slackMessage, baseSlackMessage);
+}
+
 var handleCatchAll = function(event, context) {
 
     var record = event.Records[0]
@@ -390,6 +432,10 @@ var processEvent = function(event, context) {
   else if(eventSubscriptionArn.indexOf(config.services.autoscaling.match_text) > -1 || eventSnsSubject.indexOf(config.services.autoscaling.match_text) > -1 || eventSnsMessageRaw.indexOf(config.services.autoscaling.match_text) > -1){
     console.log("processing autoscaling notification");
     slackMessage = handleAutoScaling(event, context);
+  }
+  else if(eventSnsMessage && eventSnsMessage["detail-type"] && eventSnsMessage["detail-type"].indexOf(config.services.ecs_task_state_change.match_text) > -1) {
+    console.log("processing ECS Task State Change");
+    slackMessage = handleElasticContainerService(event, context);
   }
   else{
     slackMessage = handleCatchAll(event, context);
