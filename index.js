@@ -362,14 +362,14 @@ var handleCodeBuild = function(event, context) {
   var color = "good";
   var detail = message.detail
 
-  var description = ""
-  for(key in message) {
+  var fields = [
+    { "title": "Phase", "value": detail["completed-phase"], "short": true },
+    { "title": "Duration", "value": detail["completed-phase-duration-seconds"], "short": true }
+  ];
 
-      var renderedMessage = typeof message[key] === 'object'
-                          ? JSON.stringify(message[key])
-                          : message[key]
-
-      description = description + "\n" + key + ": " + renderedMessage
+  if (detail["completed-phase-status"] === "FAILED") {
+    color = "danger";
+    fields.push({ "title": "Context", "value": detail["completed-phase-context"], "short": false });
   }
 
   var slackMessage = {
@@ -377,9 +377,7 @@ var handleCodeBuild = function(event, context) {
       attachments: [
         {
           "color": color,
-          "fields": [
-            { "title": "Completed Phase", "value": detail["completed-phase"], "short": true }
-          ],
+          "fields": fields,
           "ts": timestamp
         }
       ]
