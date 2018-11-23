@@ -353,6 +353,41 @@ var handleElasticContainerService = function(event, context) {
 return _.merge(slackMessage, baseSlackMessage);
 }
 
+var handleCodeBuild = function(event, context) {
+
+  var record = event.Records[0]
+  var timestamp = new Date(record.Sns.Timestamp).getTime() / 1000;
+  var message = JSON.parse(record.Sns.Message)
+  var subject = message["detail-type"]
+  var color = "good";
+  var detail = message.detail
+
+  var description = ""
+  for(key in message) {
+
+      var renderedMessage = typeof message[key] === 'object'
+                          ? JSON.stringify(message[key])
+                          : message[key]
+
+      description = description + "\n" + key + ": " + renderedMessage
+  }
+
+  var slackMessage = {
+      text: "*" + subject + "*",
+      attachments: [
+        {
+          "color": color,
+          "fields": [
+            { "title": "Completed Phase", "value": detail["completed-phase"], "short": true }
+          ],
+          "ts": timestamp
+        }
+      ]
+  }
+
+return _.merge(slackMessage, baseSlackMessage);
+}
+
 var handleCatchAll = function(event, context) {
 
     var record = event.Records[0]
@@ -436,6 +471,10 @@ var processEvent = function(event, context) {
   else if(eventSnsMessage && eventSnsMessage["detail-type"] && eventSnsMessage["detail-type"].indexOf(config.services.ecs_task_state_change.match_text) > -1) {
     console.log("processing ECS Task State Change");
     slackMessage = handleElasticContainerService(event, context);
+  }
+  else if(eventSnsMessage && eventSnsMessage["detail-type"] && eventSnsMessage["detail-type"].indexOf(config.services.codebuild_phase_change.match_text) > -1) {
+    console.log("processing CodeBuild Build Phase Change");
+    slackMessage = handleCodeBuild(event, context);
   }
   else{
     slackMessage = handleCatchAll(event, context);
